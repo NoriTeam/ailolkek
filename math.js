@@ -125,6 +125,7 @@ export function evaluate(
   return Object.is(result, -0) ? 0 : result;
 }
 export function format(n, digits = 8, group = true) {
+  if (typeof n === "number" && Math.abs(n) < 0.5 * 10 ** -digits) n = 0;
   return typeof n === "number"
     ? new Intl.NumberFormat("ru-RU", {
         maximumFractionDigits: digits,

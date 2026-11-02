@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, factorial, gcd, stats } from "../math.js";
+import { evaluate, factorial, gcd, stats, format } from "../math.js";
 import { tools, conversions, appFeatures } from "../catalog.js";
 const near = (a, b, epsilon = 1e-8) =>
   assert.ok(Math.abs(a - b) < epsilon, `${a} ≠ ${b}`);
@@ -45,6 +45,7 @@ test("invalid expressions and nonfinite results fail without executing code", ()
 });
 test("number theory and statistics boundaries", () => {
   assert.equal(factorial(0), 1);
+  assert.equal(format(-1e-15), "0");
   assert.equal(gcd(48, 18), 6);
   assert.equal(gcd(0, 5), 5);
   let s = stats([2, 4, 6, 8]);
