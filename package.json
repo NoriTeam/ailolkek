@@ -1,0 +1,14 @@
+{
+  "name": "aori-calculate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A calculator with an unreasonable amount of calculator-related features.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
