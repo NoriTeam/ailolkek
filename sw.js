@@ -1,4 +1,4 @@
-const CACHE = "aori-calculate-v1";
+const CACHE = "aori-calculate-v3";
 const FILES = [
   "./",
   "./index.html",
@@ -9,6 +9,22 @@ const FILES = [
   "./events.css",
   "./action-games.js",
   "./app.js",
+  "./icons.js",
+  "./surface.js",
+  "./surface.css",
+  "./online.js",
+  "./online.css",
+  "./enhancements.js",
+  "./enhancements.css",
+  "./auth.js",
+  "./media.js",
+  "./beer-games.js",
+  "./locale.js",
+  "./locale-en.json",
+  "./vendor/aori/MaterialRenderer.js",
+  "./vendor/aori/material-core.js",
+  "./vendor/aori/material-shader.js",
+  "./vendor/aori/quality.js",
   "./math.js",
   "./catalog.js",
   "./icon.svg",
@@ -42,6 +58,7 @@ self.addEventListener("activate", (e) => {
 });
 self.addEventListener("fetch", (e) => {
   if (
+    new URL(e.request.url).pathname.startsWith("/api/") ||
     e.request.method !== "GET" ||
     new URL(e.request.url).origin !== location.origin
   )

@@ -1,0 +1,252 @@
+.aori-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+.aori-stage {
+  position: absolute;
+  inset: -16px;
+  pointer-events: none;
+  z-index: 0;
+}
+.aori-blur {
+  position: absolute !important;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0 !important;
+  background: rgba(18, 16, 24, 0.74);
+}
+[data-material="webgl2"] .surface[data-aori-ready="true"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+[data-material="webgl2"] .surface[data-aori-ready="true"]:before {
+  display: none;
+}
+[data-material="webgl2"]
+  .surface[data-aori-ready="true"]
+  > *:not(.aori-stage):not(.aori-blur) {
+  z-index: 2;
+}
+[data-material="webgl2"] .key[data-aori-ready="true"] {
+  position: relative;
+  z-index: 2;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--text);
+}
+[data-material="webgl2"] .key.equals[data-aori-ready="true"] {
+  color: var(--text);
+}
+.keypad:has(.aori-key-row) {
+  display: flex;
+  flex-direction: column;
+}
+.aori-key-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+.aori-key-row > .aori-stage {
+  inset: -8px;
+}
+.sidebar,
+.topbar,
+.bottom-nav {
+  z-index: 5;
+}
+.topbar {
+  position: relative;
+}
+.surface > * {
+  min-width: 0;
+}
+.key {
+  will-change: auto !important;
+}
+.workspace {
+  position: relative;
+}
+.aori-blur ~ .aori-stage {
+  background: transparent;
+}
+.surface .surface {
+  isolation: auto;
+}
+[data-theme="paper"] .aori-blur {
+  background: rgba(255, 255, 255, 0.22);
+}
+[data-motion="off"] .aori-canvas {
+  opacity: 0.95;
+}
+.page-heading,
+.story-row,
+.club-strip,
+.event-home-strip {
+  animation: aori-enter 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes aori-enter {
+  from {
+    opacity: 0.35;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+dialog[open]:not(.action-modal) {
+  animation: aori-dialog 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes aori-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.nav-item,
+.chip,
+.secondary,
+.primary {
+  transition:
+    background 0.13s,
+    color 0.13s,
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nav-item:active,
+.chip:active,
+.secondary:active,
+.primary:active {
+  transform: scale(0.975);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-heading,
+  .story-row,
+  .club-strip,
+  .event-home-strip,
+  dialog[open] {
+    animation: none;
+  }
+}
+
+.aori-content {
+  position: relative;
+  z-index: 2;
+}
+.home-reference {
+  padding: 30px;
+  flex: 1;
+  min-height: 260px;
+}
+.home-reference h2 {
+  font-size: 25px;
+  margin: 20px 0;
+}
+.home-reference > p {
+  font-size: 12px;
+  line-height: 1.9;
+  margin: 25px 0;
+}
+.home-reference .recent-answer {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.home-reference .recent-answer > .mono {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+  overflow-wrap: anywhere;
+}
+.home-reference > .text-button {
+  margin-top: 18px;
+}
+.home-reference .recent-answer > b {
+  font-size: 25px;
+  font-weight: 450;
+  margin-top: 5px;
+  display: block;
+}
+.icon {
+  stroke-width: 1.7;
+}
+.key > .icon {
+  width: 23px;
+  height: 23px;
+}
+.topbar {
+  background: var(--bg);
+}
+.page-heading h1 {
+  font-weight: 500;
+}
+.eyebrow {
+  letter-spacing: 1.1px;
+}
+body:before {
+  background: none;
+}
+.article-art {
+  background-image: none !important;
+}
+.tool-card,
+.quest,
+.stat,
+.achievement {
+  box-shadow: none;
+}
+.tool-card:before,
+.quest:before,
+.stat:before,
+.achievement:before {
+  display: none;
+}
+.page-heading p {
+  max-width: 650px;
+}
+
+[data-material="webgl2"] .aori-canvas {
+  opacity: 0.78;
+}
+.surface[data-aori-ready="true"] {
+  outline: 1px solid rgba(208, 191, 230, 0.075);
+  outline-offset: -1px;
+}
+.aori-key-row > .aori-stage {
+  opacity: 0.9;
+}
+
+.language-select {
+  width: 57px;
+  padding: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 11px inherit;
+}
+.language-select:focus {
+  outline: 2px solid var(--accent);
+}
+@media (max-width: 600px) {
+  .top-actions {
+    gap: 7px;
+  }
+  .language-select {
+    width: 49px;
+    padding: 5px;
+  }
+}

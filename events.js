@@ -371,16 +371,16 @@ export function createEvents(api) {
           Number(stage.split("-")[1])
         : s.level,
       local = type === "local",
-      enemyHp = local ? 110 : 45 + difficulty * 18,
-      enemyAtk = local ? 14 : 6 + difficulty * 2;
+      enemyHp = local ? 110 : 35 + difficulty * 12,
+      enemyAtk = local ? 14 : 4 + difficulty;
     r.battle = {
       type,
       stage,
       turn: 1,
       energy: 3,
       cooldown: 0,
-      playerHp: local ? 110 : s.hp,
-      playerMax: local ? 110 : s.hp,
+      playerHp: local ? 110 : s.hp + 35,
+      playerMax: local ? 110 : s.hp + 35,
       enemyHp,
       enemyMax: enemyHp,
       atk: local ? 14 : s.atk,
@@ -548,7 +548,7 @@ export function createEvents(api) {
       let enemyDamage = combatDamage(
         b.enemyAtk * (b.weak > 0 ? 0.65 : 1),
         b.def,
-        correct ? 1 : 1.3,
+        correct ? 0.65 : 1,
       );
       enemyDamage = Math.max(0, enemyDamage - b.shield);
       b.shield = 0;

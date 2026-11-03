@@ -986,7 +986,7 @@ export function createUniverse(ui) {
     }
     let title = arcadeModes.find((v) => v[0] === mode)[2];
     openModal(
-      `<span class="eyebrow">ИГРОВОЙ ЗАЛ / +8 Σ ЗА РЕШЕНИЕ</span><h2>${title}</h2><div class="arcade-question">${question}</div>${input ? `<form id="u-game-form"><label>Ваш ответ<input name="answer" id="arcade-answer" type="${g.inputMode === "expression" ? "text" : "number"}" step="any" inputmode="${g.inputMode === "expression" ? "text" : "decimal"}" required ${!g.ready ? "disabled" : ""} placeholder="${mode === "twentyfour" ? "Например, (2+4)*(6-3)" : "Введите ответ"}"></label><button type="submit" class="primary" ${!g.ready ? 'disabled id="memory-submit"' : ""}>Проверить</button></form>` : `<div class="game-choices">${options.map(([t, v]) => btn(t, "u-game-answer", "secondary", `data-answer="${v}"`)).join("")}</div>`}<p id="arcade-feedback" class="muted" aria-live="polite">${mode === "memory" ? "Запомните выражение. Оно исчезнет через 5 секунд." : mode === "twentyfour" ? "Каждое из четырёх чисел нужно использовать ровно один раз." : "Награда начисляется за правильное решение."}</p>`,
+      `<span class="eyebrow">ИГРОВОЙ ЗАЛ / +8 Σ ЗА РЕШЕНИЕ</span><h2>${title}</h2><div class="arcade-question">${question}</div>${input ? `<form id="u-game-form"><label>Ваш ответ<input name="answer" id="arcade-answer" type="${g.inputMode === "expression" ? "text" : "number"}" step="any" inputmode="${g.inputMode === "expression" ? "text" : "decimal"}" required ${!g.ready ? "disabled" : ""} placeholder="${mode === "twentyfour" ? "Например, (2+4)*(6-3)" : "Введите ответ"}"></label><button type="submit" class="primary" ${!g.ready ? 'disabled id="memory-submit"' : ""}>Проверить</button></form>` : `<div class="game-choices">${options.map(([t, v]) => btn(t, "u-game-answer", "secondary", `data-answer="${v}"`)).join("")}</div>`}<p id="arcade-feedback" class="muted" aria-live="polite">${mode === "memory" ? "Запомните выражение. Оно исчезнет через 10 секунд." : mode === "twentyfour" ? "Каждое из четырёх чисел нужно использовать ровно один раз." : "Награда начисляется за правильное решение."}</p>`,
     );
     if (mode === "memory") {
       setTimeout(() => {
@@ -997,7 +997,7 @@ export function createUniverse(ui) {
         $("#arcade-answer").disabled = false;
         $("#memory-submit").disabled = false;
         $("#arcade-answer").focus();
-      }, 5000);
+      }, 10000);
     }
   }
   function checkArcade(raw) {

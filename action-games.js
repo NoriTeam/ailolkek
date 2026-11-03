@@ -39,7 +39,7 @@ export function launchActionGame(mode, api) {
     elapsed = 0,
     score = 0,
     kills = 0,
-    health = 100,
+    health = 150,
     ammo = 8,
     flash = 0,
     reloading = false,
@@ -74,6 +74,12 @@ export function launchActionGame(mode, api) {
     spawn = 0,
     gateClock = 0;
   const listen = [];
+  const htmlCache = new WeakMap();
+  function setHTML(node, html) {
+    if (htmlCache.get(node) === html) return;
+    htmlCache.set(node, html);
+    node.innerHTML = html;
+  }
   function on(el, event, fn, options) {
     el.addEventListener(event, fn, options);
     listen.push(() => el.removeEventListener(event, fn, options));
@@ -185,7 +191,7 @@ export function launchActionGame(mode, api) {
     let b = hits[0].b;
     if (b.value !== question.answer) {
       say("Это не ответ на " + question.text);
-      health -= 3;
+      health -= 1;
       return;
     }
     b.hp -= evaluate("12*2");
@@ -206,7 +212,7 @@ export function launchActionGame(mode, api) {
           finish(true, "Три волны исправлены");
           return;
         }
-        health = Math.min(100, health + 20);
+        health = Math.min(150, health + 35);
         ammo = 8;
         spawnBots(3 + wave);
         say("Волна " + wave + " · здоровье +20");
@@ -227,7 +233,7 @@ export function launchActionGame(mode, api) {
       ) {
         ammo = 8;
         reloading = false;
-        task.innerHTML = "";
+        setHTML(task, "");
         say("Боезапас восстановлен");
       } else say("Проверьте вычисление");
     });
@@ -309,7 +315,8 @@ export function launchActionGame(mode, api) {
     movePlayer(dt);
     shotCooldown = Math.max(0, shotCooldown - dt);
     flash = Math.max(0, flash - dt);
-    if (mode === "royale") zone = Math.max(2.1, 11 - elapsed * 0.055);
+    if (mode === "royale")
+      zone = Math.max(2.1, 11 - Math.max(0, elapsed - 30) * 0.032);
     let ceiling = ctx.createLinearGradient(0, 0, 0, h / 2);
     ceiling.addColorStop(0, "#0d101b");
     ceiling.addColorStop(1, "#30273e");
@@ -408,12 +415,12 @@ export function launchActionGame(mode, api) {
       if (b.hp <= 0) continue;
       let d = Math.hypot(b.x - player.x, b.y - player.y);
       b.shot -= dt;
-      if (d < 6 && clearLine(b.x, b.y) && b.shot <= 0) {
-        health -= mode === "royale" ? 4 : 3;
-        b.shot = 2.8 + Math.random() * 2;
+      if (elapsed > 10 && d < 6 && clearLine(b.x, b.y) && b.shot <= 0) {
+        health -= 1;
+        b.shot = 5 + Math.random() * 3;
       }
       if (d > 2.3) {
-        let speed = 0.35 * dt,
+        let speed = 0.22 * dt,
           dx = ((player.x - b.x) / d) * speed,
           dy = ((player.y - b.y) / d) * speed;
         if (!solid(b.x + dx, b.y)) b.x += dx;
@@ -429,7 +436,7 @@ export function launchActionGame(mode, api) {
       }
     }
     if (mode === "royale" && Math.hypot(player.x - 8, player.y - 8) > zone) {
-      health -= dt * 2;
+      health -= dt * 0.5;
       say("За пределами зоны. Двигайтесь к центру арены.");
     }
     if (health <= 0) {
@@ -483,9 +490,15 @@ export function launchActionGame(mode, api) {
       ctx.fillStyle = "#d2434315";
       ctx.fillRect(0, 0, w, h);
     }
-    hud.innerHTML = `<span>HP ${Math.max(0, Math.ceil(health))}</span><span>Σ ${ammo}/8</span><span>${mode === "royale" ? "Осталось " + (bots.filter((b) => b.hp > 0).length + 1) + "/13" : "Волна " + wave + "/3"}</span>`;
+    setHTML(
+      hud,
+      `<span>HP ${Math.max(0, Math.ceil(health))}</span><span>Σ ${ammo}/8</span><span>${mode === "royale" ? "Осталось " + (bots.filter((b) => b.hp > 0).length + 1) + "/13" : "Волна " + wave + "/3"}</span>`,
+    );
     if (!reloading)
-      task.innerHTML = `<b>${question.text} = ?</b><small>Найдите цель с правильным ответом</small>`;
+      setHTML(
+        task,
+        `<b>${question.text} = ?</b><small>Найдите цель с правильным ответом</small>`,
+      );
     if (mode === "royale") {
       ctx.strokeStyle = "#9d90bd66";
       ctx.strokeRect(w - 84, 70, 65, 65);
@@ -509,7 +522,7 @@ export function launchActionGame(mode, api) {
         (keys.ArrowLeft || keys.KeyA || controls.left ? 1 : 0),
       boost = controls.boost || keys.Space;
     car.x = Math.max(-1.25, Math.min(1.25, car.x + steer * dt * 1.7));
-    let target = boost && car.fuel > 0 ? 220 : 150;
+    let target = boost && car.fuel > 0 ? 175 : 110;
     car.speed += (target - car.speed) * dt * 0.7;
     if (Math.abs(car.x) > 1.05) car.speed *= 1 - dt * 0.8;
     if (boost) car.fuel = Math.max(0, car.fuel - dt * 8);
@@ -610,7 +623,7 @@ export function launchActionGame(mode, api) {
         Math.abs(car.x - (o.lane - 1) * 0.65) < 0.35
       ) {
         o.hit = true;
-        car.speed *= 0.4;
+        car.speed *= 0.882;
         car.fuel = Math.max(0, car.fuel - 12);
         say("Препятствие · скорость снижена");
       }
@@ -648,7 +661,7 @@ export function launchActionGame(mode, api) {
           car.fuel = Math.min(100, car.fuel + 15);
           say(g.q.text + " = " + g.q.answer + " · +25 очков");
         } else {
-          car.speed *= 0.7;
+          car.speed *= 0.88;
           say("Верный ответ: " + g.q.answer);
         }
       }
@@ -680,11 +693,17 @@ export function launchActionGame(mode, api) {
     ctx.fillRect(9, 28, 9, 4);
     ctx.restore();
     score += dt * 0.3;
-    hud.innerHTML = `<span>${Math.round(car.speed)} км/ч</span><span>Заряд ${Math.ceil(car.fuel)}%</span><span>${Math.max(0, 60 - Math.floor(elapsed))} с</span>`;
+    setHTML(
+      hud,
+      `<span>${Math.round(car.speed)} км/ч</span><span>Заряд ${Math.ceil(car.fuel)}%</span><span>${Math.max(0, 60 - Math.floor(elapsed))} с</span>`,
+    );
     let gate = gates.find((g) => !g.done);
-    task.innerHTML = gate
-      ? `<b>${gate.q.text} = ?</b><small>Выберите полосу с правильным ответом</small>`
-      : `<b>${Math.floor(score)} очков</b><small>Следующие ворота скоро появятся</small>`;
+    setHTML(
+      task,
+      gate
+        ? `<b>${gate.q.text} = ?</b><small>Выберите полосу с правильным ответом</small>`
+        : `<b>${Math.floor(score)} очков</b><small>Следующие ворота скоро появятся</small>`,
+    );
     if (elapsed >= 60) finish(true, "Финиш · " + Math.floor(score) + " очков");
   }
   function loop(now) {

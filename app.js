@@ -1,3 +1,14 @@
+import { imageSource } from "./media.js";
+import { translateLabel } from "./locale.js";
+import { lucideIcons } from "./icons.js";
+import { createSurface } from "./surface.js";
+import { createOnline, onlineFeatures } from "./online.js";
+import {
+  createEnhancements,
+  extraFeatures,
+  avatarData,
+} from "./enhancements.js";
+let surface, online, enhancements;
 import { createUniverse, universeFeatures, eventFeatures } from "./universe.js";
 let universe;
 import { evaluate, format } from "./math.js";
@@ -15,41 +26,17 @@ const $ = (s) => document.querySelector(s),
           "'": "&#39;",
         })[c],
     );
-const icons = {
-  calc: '<rect x="5" y="3" width="14" height="18" rx="4"/><path d="M8 8h8M8 12h1m6 0h1m-8 4h1m6 0h1"/>',
-  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
-  tools: '<path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm13 0v6m-3-3h6"/>',
-  community:
-    '<circle cx="9" cy="8" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-2-4"/>',
-  learn:
-    '<path d="M3 4h6a4 4 0 0 1 3 2 4 4 0 0 1 3-2h6v15h-6a4 4 0 0 0-3 2 4 4 0 0 0-3-2H3zm9 2v15"/>',
-  games: '<path d="m8 4 4 6 4-6m-4 6v11M4 8l8 2 8-2M5 16l7-6 7 6"/>',
-  profile:
-    '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
-  settings:
-    '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',
-  history: '<path d="M3 11a9 9 0 1 1 2 7M3 4v7h7m2-5v6l4 2"/>',
-  lab: '<path d="M3 3v18h18M5 16c5 0 4-11 8-11s2 9 7 9"/>',
-  search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
-  arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
-  plus: '<path d="M12 4v16M4 12h16"/>',
-  heart: '<path d="M20 5c-3-3-7 0-8 2-1-2-5-5-8-2s0 8 8 14c8-6 11-11 8-14Z"/>',
-  star: '<path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"/>',
-  share: '<path d="M12 15V3m-4 4 4-4 4 4M5 11H3v10h18V11h-2"/>',
-  check: '<path d="m5 12 5 5L20 7"/>',
-  close: '<path d="m6 6 12 12M6 18 18 6"/>',
-  bolt: '<path d="m13 2-9 12h7l-1 8 10-13h-7Z"/>',
-  copy: '<rect x="8" y="8" width="13" height="13" rx="3"/><path d="M16 5V3H3v13h2"/>',
-  chevron: '<path d="m9 5 7 7-7 7"/>',
-  flame:
-    '<path d="M13 2c2 7-4 8-2 12 3-1 4-3 4-5 6 5 5 13-3 13C2 22 2 10 7 7c-1 4 1 5 2 5-1-4 5-5 4-10Z"/>',
-  trophy:
-    '<path d="M7 3h10v7a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 3v6m-5 0h10"/>',
-  bookmark: '<path d="M5 3h14v19l-7-5-7 5Z"/>',
-  message: '<path d="M3 4h18v13H9l-6 4Zm5 5h8m-8 4h5"/>',
-  download: '<path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/>',
-  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-};
+const icons = { ...lucideIcons };
+Object.assign(icons, {
+  online: icons.users,
+  friends: icons.users,
+  messages: icons.message,
+  clans: icons.shield,
+  codes: icons.ticket,
+  avatar: icons.profile,
+  ibeer: icons.beer,
+  "network-feed": icons.message,
+});
 icons.events = icons.bolt;
 icons.action = icons.lab;
 icons.club = icons.community;
@@ -161,7 +148,9 @@ const total =
   conversions.length +
   appFeatures.length +
   universeFeatures.length +
-  eventFeatures.length;
+  eventFeatures.length +
+  onlineFeatures.length +
+  extraFeatures.length;
 function persist() {
   try {
     localStorage.setItem("aori-calculate-v1", JSON.stringify(state));
@@ -182,6 +171,7 @@ function applySettings() {
   d.dataset.motion = s.motion ? "on" : "off";
   d.dataset.glow = s.glow ? "on" : "off";
   d.dataset.focus = s.focus ? "on" : "off";
+  surface?.refresh();
 }
 function toast(message) {
   $("#toast").textContent = message;
@@ -222,10 +212,14 @@ function compute(source = expr, kind = "calc") {
     state.history = state.history.slice(0, 500);
     dailyMark();
     reward(5);
-    queueMicrotask(() => universe?.recordCalculation(value));
+    queueMicrotask(() => {
+      universe?.recordCalculation(value);
+      surface?.react("success");
+    });
     return value;
   } catch (e) {
     error = e.message;
+    surface?.react("error");
     return null;
   }
 }
@@ -236,6 +230,7 @@ function useExpression(s) {
   navigate("calc");
 }
 function navigate(next) {
+  online?.leave();
   view = next;
   search = "";
   category = "Все";
@@ -244,6 +239,7 @@ function navigate(next) {
   route.searchParams.delete("expression");
   window.history.replaceState(null, "", route);
   render();
+  if (online?.supports(view)) online.enter(view);
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 const btn = (label, action, cls = "", attrs = "") =>
@@ -258,8 +254,15 @@ function navItem(v, label) {
     `data-view="${v}" ${view === v ? 'aria-current="page"' : ""}`,
   );
 }
+function avatarGlyph() {
+  return imageSource(state.avatarImage)
+    ? `<img src="${imageSource(state.avatarImage)}" alt="">`
+    : state.avatarSeed
+      ? `<img src="${avatarData(state.avatarSeed)}" alt="">`
+      : esc(state.avatar);
+}
 function shell(content) {
-  return `<aside class="sidebar"><a class="brand" href="#home" aria-label="Aori Calculate, главная"><img src="icon.svg" alt=""><div>aori<span>calculate</span></div></a><span class="side-label">ПРОСТРАНСТВО ВЫЧИСЛЕНИЙ</span><nav>${navItem("home", "Обзор")}${navItem("calc", "Калькулятор")}${navItem("tools", "Инструменты")}${navItem("lab", "Лаборатория")}<div class="nav-separator"></div>${navItem("community", "Сообщество")}${navItem("learn", "Журнал")}${navItem("games", "Тренировки")}${navItem("history", "История")}<div class="nav-separator"></div>${navItem("club", "Клуб Σ")}${navItem("novel", "Нулевой этаж")}${navItem("arcade", "Игровой зал")}${navItem("events", "Ивенты")}${navItem("action", "Гонки и арена")}</nav><div class="side-bottom"><div class="surface-mini"><span class="status-dot"></span> Aori Surface <span class="mono">01</span></div>${navItem("custom", "Эффекты и звук")}${navItem("settings", "Настройки")}${btn(`<span class="avatar small">${esc(state.avatar)}</span><span><b>${esc(state.name)}</b><small>Уровень ${level()} · ${state.xp} XP</small></span>${icon("chevron")}`, "nav", "profile-link", 'data-view="profile"')}</div></aside><div class="workspace"><header class="topbar"><a href="#home" class="mobile-brand"><img src="icon.svg" alt="Aori Calculate"></a><div class="breadcrumbs">Личное пространство <span>/</span> <b>${{ home: "Обзор", calc: "Калькулятор", tools: "Инструменты", lab: "Лаборатория", community: "Сообщество", learn: "Журнал", games: "Тренировки", history: "История", profile: "Профиль", settings: "Настройки", club: "Клуб Σ", rewards: "Награды", shop: "Магазин", custom: "Эффекты и звук", novel: "Нулевой этаж", arcade: "Игровой зал", offers: "Витрина", inbox: "Входящие", events: "Ивенты", rpg: "Персонаж RPG", battle: "Бои", passes: "Пропуска", action: "Гонки и арена" }[view]}</b></div><div class="top-actions">${universe?.wallet() || ""}${btn(`${icon("search")}<span>Найти инструмент</span><kbd>/</kbd>`, "catalog", "search-trigger", 'aria-label="Найти возможность"')}${btn(`${icon("flame")}<span>${universe?.streak() ?? streak()} ${wordDays(universe?.streak() ?? streak())}</span>`, "nav", "streak", 'data-view="rewards"')}${btn(esc(state.avatar), "nav", "avatar", 'data-view="profile"')}</div></header><main id="main">${content}</main><footer><span>aori calculate</span>${btn(`${total} ${plural(total, "возможность", "возможности", "возможностей")} ${icon("arrow")}`, "catalog", "text-button")}</footer></div><nav class="bottom-nav" aria-label="Основная навигация">${navItem("home", "Обзор")}${navItem("calc", "Считать")}${navItem("tools", "Каталог")}${navItem("community", "Лента")}${navItem("profile", "Профиль")}</nav>`;
+  return `<aside class="sidebar"><a class="brand" href="#home" aria-label="Aori Calculate, главная"><img src="icon.svg" alt=""><div>aori<span>calculate</span></div></a><span class="side-label">ПРОСТРАНСТВО ВЫЧИСЛЕНИЙ</span><nav>${navItem("home", "Обзор")}${navItem("calc", "Калькулятор")}${navItem("tools", "Инструменты")}${navItem("lab", "Лаборатория")}<div class="nav-separator"></div>${navItem("online", "Онлайн-клуб")}${navItem("learn", "Журнал")}${navItem("games", "Тренировки")}${navItem("history", "История")}<div class="nav-separator"></div>${navItem("club", "Клуб Σ")}${navItem("novel", "Нулевой этаж")}${navItem("arcade", "Игровой зал")}${navItem("events", "Ивенты")}${navItem("action", "Гонки и арена")}</nav><div class="side-bottom"><div class="surface-mini"><span class="status-dot"></span> Aori Surface <span class="mono">01</span></div>${navItem("custom", "Эффекты и звук")}${navItem("avatar", "Аватарка")}${navItem("ibeer", "iBeer")}${navItem("settings", "Настройки")}${btn(`<span class="avatar small">${avatarGlyph()}</span><span><b>${esc(state.name)}</b><small>Уровень ${level()} · ${state.xp} XP</small></span>${icon("chevron")}`, "nav", "profile-link", 'data-view="profile"')}</div></aside><div class="workspace"><header class="topbar"><a href="#home" class="mobile-brand"><img src="icon.svg" alt="Aori Calculate"></a><div class="breadcrumbs">Личное пространство <span>/</span> <b>${{ home: "Обзор", calc: "Калькулятор", tools: "Инструменты", lab: "Лаборатория", community: "Сообщество", learn: "Журнал", games: "Тренировки", history: "История", profile: "Профиль", settings: "Настройки", club: "Клуб Σ", rewards: "Награды", shop: "Магазин", custom: "Эффекты и звук", novel: "Нулевой этаж", arcade: "Игровой зал", offers: "Витрина", inbox: "Входящие", events: "Ивенты", rpg: "Персонаж RPG", battle: "Бои", passes: "Пропуска", action: "Гонки и арена", online: "Онлайн-клуб", friends: "Друзья", messages: "Сообщения", clans: "Кланы", codes: "Коды", "network-feed": "Общая лента", avatar: "Аватарка", ibeer: "iBeer" }[view]}</b></div><div class="top-actions">${universe?.wallet() || ""}${btn(`${icon("search")}<span>Найти инструмент</span><kbd>/</kbd>`, "catalog", "search-trigger", 'aria-label="Найти возможность"')}${btn(`${icon("flame")}<span>${universe?.streak() ?? streak()} ${wordDays(universe?.streak() ?? streak())}</span>`, "nav", "streak", 'data-view="rewards"')}${btn(avatarGlyph(), "nav", "avatar", 'data-view="profile"')}</div></header><main id="main">${content}</main><footer><span>aori calculate</span>${btn(`${total} ${plural(total, "возможность", "возможности", "возможностей")} ${icon("arrow")}`, "catalog", "text-button")}</footer></div><nav class="bottom-nav" aria-label="Основная навигация">${navItem("home", "Обзор")}${navItem("calc", "Считать")}${navItem("tools", "Каталог")}${navItem("network-feed", "Лента")}${navItem("profile", "Профиль")}</nav>`;
 }
 function plural(n, one, few, many) {
   let a = Math.abs(n) % 100,
@@ -328,7 +331,7 @@ function visibleStories() {
   ];
 }
 function calcCard(compact = false) {
-  return `<section class="surface calculator ${compact ? "dashboard-calculator" : ""}" aria-label="Калькулятор"><div class="card-top"><div class="label">${icon("calc")} КАЛЬКУЛЯТОР</div><div class="pill-tabs">${btn("Обычный", "mode", !scientific ? "selected" : "", 'data-mode="basic"')}${btn("Научный", "mode", scientific ? "selected" : "", 'data-mode="science"')}</div></div><div class="calc-display"><div class="display-meta"><span id="calc-angle">${angle} <i>·</i> ${state.memory ? "M = " + fmt(state.memory) : "ГОТОВ К ВЫЧИСЛЕНИЯМ"}</span>${btn(icon("history"), "nav", "icon-button", 'data-view="history" aria-label="История вычислений"')}</div><label class="sr-only" for="expression">Выражение</label><input id="expression" class="expression-input" autocomplete="off" spellcheck="false" inputmode="text" placeholder="0" value="${esc(expr)}"><output id="calc-result" class="calc-result ${error ? "error" : ""}" aria-live="polite">${error ? esc(error) : fmt(result)}</output><div class="result-caption" id="result-caption">${finished ? "РЕЗУЛЬТАТ ВЫЧИСЛЕНИЯ" : ""}</div></div>${scientific ? `<div class="science-keys">${["sin(", "cos(", "tan(", "asin(", "acos(", "atan(", "ln(", "log(", "sqrt(", "cbrt(", "abs(", "exp(", "π", "e", "^", "!", "(", ")", "ans", "mem", "sinh(", "cosh(", "tanh(", "round("].map((k) => btn(k.replace("(", "") || k, "key", "science-key", `data-key="${k}"`)).join("")}</div>` : ""}<div class="memory-row">${["MC", "MR", "MS", "M+", "M−", angle].map((k) => btn(k, "memory", "text-button", `data-key="${k}"`)).join("")}</div><div class="keypad">${["AC", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "−", "1", "2", "3", "+", "⌫", "0", ",", "="].map((k) => btn(k, "key", `key ${["÷", "×", "−", "+"].includes(k) ? "operator" : ""} ${k === "=" ? "equals" : ""} ${["AC", "±", "%"].includes(k) ? "utility" : ""}`, `data-key="${k}" aria-label="${{ "⌫": "Удалить символ", AC: "Очистить", "=": "Вычислить" }[k] || k}"`)).join("")}</div><div class="calc-bottom">${btn(`${icon("copy")} Копировать`, "copy", "text-button")}${btn(`${icon("share")} Поделиться`, "share", "text-button")}${btn(`${icon("plus")} В ленту`, "publish", "text-button")}</div></section>`;
+  return `<section class="surface calculator ${compact ? "dashboard-calculator" : ""}" aria-label="Калькулятор"><div class="card-top"><div class="label">${icon("calc")} КАЛЬКУЛЯТОР</div><div class="pill-tabs">${btn("Обычный", "mode", !scientific ? "selected" : "", 'data-mode="basic"')}${btn("Научный", "mode", scientific ? "selected" : "", 'data-mode="science"')}</div></div><div class="calc-display"><div class="display-meta"><span id="calc-angle">${angle} <i>·</i> ${state.memory ? "M = " + fmt(state.memory) : "ГОТОВ К ВЫЧИСЛЕНИЯМ"}</span>${btn(icon("history"), "nav", "icon-button", 'data-view="history" aria-label="История вычислений"')}</div><label class="sr-only" for="expression">Выражение</label><input id="expression" class="expression-input" autocomplete="off" spellcheck="false" inputmode="text" placeholder="0" value="${esc(expr)}"><output id="calc-result" class="calc-result ${error ? "error" : ""}" aria-live="polite">${error ? esc(error) : fmt(result)}</output><div class="result-caption" id="result-caption">${finished ? "РЕЗУЛЬТАТ ВЫЧИСЛЕНИЯ" : ""}</div></div>${scientific ? `<div class="science-keys">${["sin(", "cos(", "tan(", "asin(", "acos(", "atan(", "ln(", "log(", "sqrt(", "cbrt(", "abs(", "exp(", "π", "e", "^", "!", "(", ")", "ans", "mem", "sinh(", "cosh(", "tanh(", "round("].map((k) => btn(k.replace("(", "") || k, "key", "science-key", `data-key="${k}"`)).join("")}</div>` : ""}<div class="memory-row">${["MC", "MR", "MS", "M+", "M−", angle].map((k) => btn(k, "memory", "text-button", `data-key="${k}"`)).join("")}</div><div class="keypad">${["AC", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "−", "1", "2", "3", "+", "⌫", "0", ",", "="].map((k) => btn(k === "⌫" ? icon("delete") : k, "key", `key ${["÷", "×", "−", "+"].includes(k) ? "operator" : ""} ${k === "=" ? "equals" : ""} ${["AC", "±", "%"].includes(k) ? "utility" : ""}`, `data-key="${k}" aria-label="${{ "⌫": "Удалить символ", AC: "Очистить", "=": "Вычислить" }[k] || k}"`)).join("")}</div><div class="calc-bottom">${btn(`${icon("copy")} Копировать`, "copy", "text-button")}${btn(`${icon("share")} Поделиться`, "share", "text-button")}${btn(`${icon("plus")} В ленту`, "publish", "text-button")}</div></section>`;
 }
 function recommendation() {
   let used = state.history[0]?.kind;
@@ -354,7 +357,19 @@ function home() {
           : hour < 18
             ? "Добрый день"
             : "Добрый вечер";
-  return `${heading("AORI CALCULATE / ЛИЧНОЕ ПРОСТРАНСТВО", `${greet}, ${esc(state.name)}<span class="heading-dot">.</span>`, "Сегодня можно посчитать чуть больше обычного.")}${stories()}${universe?.home() || ""}<div class="dashboard-grid">${calcCard(true)}<div class="dashboard-right"><section class="surface hero-card"><div class="eyebrow">КАЛЬКУЛЯТОР С ОБШИРНЫМИ ПЛАНАМИ</div><h2>У чисел<br>свои планы<span class="heading-dot">.</span></h2><p>Ваши расчёты заслуживают собственной ленты.<br>И, возможно, нескольких подписчиков.</p><div class="math-art" aria-hidden="true"><span class="art-ring"></span><span class="art-orb">a</span><span class="art-small">²</span><span class="art-spark">+</span><span class="art-equal">=</span></div>${btn(`Исследовать ${total} ${plural(total, "возможность", "возможности", "возможностей")} ${icon("arrow")}`, "catalog", "primary")}</section><section class="surface daily-card"><div class="card-top"><span class="label">${icon("bolt")} ЗАДАЧА ДНЯ</span><span class="badge green-badge">+25 XP</span></div><h3>Скидка на скидку</h3><p>Цена 2 000. Сначала −20%, затем −10%.<br>Сколько останется заплатить?</p><div class="challenge-bottom"><span class="mono">2 000 × 0,8 × 0,9 = ?</span>${btn("Решить " + icon("arrow"), "daily", "round-button", 'aria-label="Решить задачу дня"')}</div></section><section class="surface progress-card"><span class="avatar">${esc(state.avatar)}</span><div><b>Уровень ${level()}. ${state.xp < 100 ? "Начало большого счёта" : "Числа под контролем"}</b><p>${state.xp} XP · ${state.history.length} ${plural(state.history.length, "вычисление", "вычисления", "вычислений")}</p><div class="progress-track"><i style="width:${Math.min(100, state.xp % 100)}%"></i></div></div>${btn(icon("chevron"), "nav", "icon-button", 'data-view="profile" aria-label="Открыть профиль"')}</section></div></div><div class="section-heading"><div><span class="eyebrow">ПОД ВАШИ ЗАДАЧИ</span><h2>Полезно прямо сейчас</h2></div>${btn("Все инструменты " + icon("arrow"), "nav", "text-button", 'data-view="tools"')}</div><div class="quick-grid">${recommendation()
+  return `${heading("AORI CALCULATE / ЛИЧНОЕ ПРОСТРАНСТВО", "Калькулятор.", "Введите выражение. Для готовой задачи откройте каталог инструментов.")}${stories()}${universe?.home() || ""}<div class="dashboard-grid">${calcCard(true)}<div class="dashboard-right"><section class="surface home-reference"><div class="card-top"><span class="label">${icon("history")} ПОСЛЕДНИЕ РАСЧЁТЫ</span></div><h2>История под рукой</h2>${
+    state.history
+      .slice(0, 3)
+      .map((h) =>
+        btn(
+          `<span class="mono">${esc(h.expression)}</span><b>= ${esc(fmt(h.result))}</b>`,
+          "reuse",
+          "recent-answer",
+          `data-id="${h.id}"`,
+        ),
+      )
+      .join("") || "<p>Пока нет расчётов. Введите выражение в калькуляторе.</p>"
+  }${btn("Открыть историю " + icon("arrow"), "nav", "text-button", 'data-view="history"')}</section><section class="surface daily-card"><div class="card-top"><span class="label">${icon("bolt")} ЗАДАЧА ДНЯ</span><span class="badge green-badge">+25 XP</span></div><h3>Скидка на скидку</h3><p>Цена 2 000. Сначала −20%, затем −10%.<br>Сколько останется заплатить?</p><div class="challenge-bottom"><span class="mono">2 000 × 0,8 × 0,9 = ?</span>${btn("Решить " + icon("arrow"), "daily", "round-button", 'aria-label="Решить задачу дня"')}</div></section><section class="surface progress-card"><span class="avatar">${avatarGlyph()}</span><div><b>Уровень ${level()}. ${state.xp < 100 ? "Начало большого счёта" : "Числа под контролем"}</b><p>${state.xp} XP · ${state.history.length} ${plural(state.history.length, "вычисление", "вычисления", "вычислений")}</p><div class="progress-track"><i style="width:${Math.min(100, state.xp % 100)}%"></i></div></div>${btn(icon("chevron"), "nav", "icon-button", 'data-view="profile" aria-label="Открыть профиль"')}</section></div></div><div class="section-heading"><div><span class="eyebrow">ИНСТРУМЕНТЫ</span><h2>Частые расчёты</h2></div>${btn("Все инструменты " + icon("arrow"), "nav", "text-button", 'data-view="tools"')}</div><div class="quick-grid">${recommendation()
     .map((t, i) =>
       btn(
         `<span class="tool-symbol ${["lavender", "green", "peach", "blue"][i]}">${["%", "÷", "↗", "⅟"][i]}</span><span><b>${t.title}</b><small>${t.category}</small></span>${icon("arrow")}`,
@@ -365,7 +380,7 @@ function home() {
     )
     .join(
       "",
-    )}</div><div class="section-heading"><div><span class="eyebrow">МЫСЛИ, КОТОРЫЕ СХОДЯТСЯ</span><h2>В поле вашего зрения</h2></div>${btn("Открыть ленту " + icon("arrow"), "nav", "text-button", 'data-view="community"')}</div><div class="editorial-grid">${articleCard(articles[0])}${postCard([...state.posts, ...seed][0], true)}${articleCard(articles[1])}</div>`;
+    )}</div><div class="section-heading"><div><span class="eyebrow">СТАТЬИ И РАСЧЁТЫ</span><h2>Журнал</h2></div>${btn("Открыть ленту " + icon("arrow"), "nav", "text-button", 'data-view="community"')}</div><div class="editorial-grid">${articleCard(articles[0])}${postCard([...state.posts, ...seed][0], true)}${articleCard(articles[1])}</div>`;
 }
 function toolCards() {
   let q = search.toLowerCase();
@@ -373,7 +388,15 @@ function toolCards() {
     .filter(
       (t) =>
         (category === "Все" || category === t.category) &&
-        (t.title + " " + t.category + " " + t.formula)
+        (
+          t.title +
+          " " +
+          t.category +
+          " " +
+          t.formula +
+          " " +
+          translateLabel(t.title + " " + t.category)
+        )
           .toLowerCase()
           .includes(q),
     )
@@ -410,7 +433,9 @@ function toolsPage() {
 function converterCards() {
   return conversions
     .filter((c) =>
-      (c.title + c.category).toLowerCase().includes(search.toLowerCase()),
+      (c.title + c.category + translateLabel(c.title + c.category))
+        .toLowerCase()
+        .includes(search.toLowerCase()),
     )
     .map(
       (c) =>
@@ -457,7 +482,7 @@ function community() {
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  return `${heading("ОБЩИЙ ЗНАМЕНАТЕЛЬ", "Мысли сходятся здесь.", "Локальная лента формул. Делитесь расчётами по ссылке с теми, кто считает вместе с вами.")}${stories()}<div class="community-layout"><div><section class="surface composer"><span class="avatar">${esc(state.avatar)}</span>${btn("Какая формула у вас сегодня?", "publish", "composer-prompt")}${btn(icon("plus"), "publish", "round-button", 'aria-label="Опубликовать расчёт"')}</section><div class="chips">${["Для вас", "Подписки", "Сохранённое"].map((t) => btn(t, "feed-tab", feedTab === t ? "chip active" : "chip", `data-tab="${t}"`)).join("")}</div><div class="search-field">${icon("search")}<input id="feed-search" placeholder="Найти формулу, автора или тему" value="${esc(search)}" aria-label="Поиск в ленте"></div><div class="feed" id="feed-list">${posts.map((p) => postCard(p)).join("") || empty("Здесь пока тихо", "Подпишитесь на авторов или сохраните интересную формулу.")}</div></div><aside class="community-aside"><section class="surface aside-card"><span class="eyebrow">ПОХОЖИЙ ХОД МЫСЛИ</span><h3>Ваш круг вычислений</h3>${authors.map((a, i) => `<div class="author-row"><span class="avatar">${["φ", "%", "97"][i]}</span><span><b>${a}</b><small>Формулы и разборы</small></span>${btn(state.following.includes(a) ? icon("check") : icon("plus"), "follow", "icon-button", `data-author="${a}" aria-label="Подписка на ${a}"`)}</div>`).join("")}</section><section class="surface aside-card"><span class="eyebrow">ВОПРОС МЕТОДА</span><h3>Как посчитать 18 × 5?</h3><p>Один результат. Два пути.</p>${["18 × 10 ÷ 2", "20 × 5 − 10"].map((v, i) => btn(`${v} ${state.poll === i ? icon("check") : ""}`, "poll", `poll-option ${state.poll === i ? "active" : ""}`, `data-choice="${i}"`)).join("")}<small>Ваш выбор сохраняется на этом устройстве.</small></section><section class="surface aside-card"><span class="eyebrow">КОЛЛЕКЦИИ</span><h3>Соберите свою систему</h3><p>${state.collections.length} коллекций вычислений</p>${btn("Создать коллекцию " + icon("plus"), "collection", "text-button")}${state.collections.map((c) => `<button class="collection-item" data-action="open-collection" data-id="${c.id}"><b>${esc(c.name)}</b><small>${c.items.length} расчётов</small></button>`).join("")}</section></aside></div>`;
+  return `${heading("ОБЩИЙ ЗНАМЕНАТЕЛЬ", "Мысли сходятся здесь.", "Локальная лента формул. Делитесь расчётами по ссылке с теми, кто считает вместе с вами.")}${stories()}<div class="community-layout"><div><section class="surface composer"><span class="avatar">${avatarGlyph()}</span>${btn("Какая формула у вас сегодня?", "publish", "composer-prompt")}${btn(icon("plus"), "publish", "round-button", 'aria-label="Опубликовать расчёт"')}</section><div class="chips">${["Для вас", "Подписки", "Сохранённое"].map((t) => btn(t, "feed-tab", feedTab === t ? "chip active" : "chip", `data-tab="${t}"`)).join("")}</div><div class="search-field">${icon("search")}<input id="feed-search" placeholder="Найти формулу, автора или тему" value="${esc(search)}" aria-label="Поиск в ленте"></div><div class="feed" id="feed-list">${posts.map((p) => postCard(p)).join("") || empty("Здесь пока тихо", "Подпишитесь на авторов или сохраните интересную формулу.")}</div></div><aside class="community-aside"><section class="surface aside-card"><span class="eyebrow">ПОХОЖИЙ ХОД МЫСЛИ</span><h3>Ваш круг вычислений</h3>${authors.map((a, i) => `<div class="author-row"><span class="avatar">${["φ", "%", "97"][i]}</span><span><b>${a}</b><small>Формулы и разборы</small></span>${btn(state.following.includes(a) ? icon("check") : icon("plus"), "follow", "icon-button", `data-author="${a}" aria-label="Подписка на ${a}"`)}</div>`).join("")}</section><section class="surface aside-card"><span class="eyebrow">ВОПРОС МЕТОДА</span><h3>Как посчитать 18 × 5?</h3><p>Один результат. Два пути.</p>${["18 × 10 ÷ 2", "20 × 5 − 10"].map((v, i) => btn(`${v} ${state.poll === i ? icon("check") : ""}`, "poll", `poll-option ${state.poll === i ? "active" : ""}`, `data-choice="${i}"`)).join("")}<small>Ваш выбор сохраняется на этом устройстве.</small></section><section class="surface aside-card"><span class="eyebrow">КОЛЛЕКЦИИ</span><h3>Соберите свою систему</h3><p>${state.collections.length} коллекций вычислений</p>${btn("Создать коллекцию " + icon("plus"), "collection", "text-button")}${state.collections.map((c) => `<button class="collection-item" data-action="open-collection" data-id="${c.id}"><b>${esc(c.name)}</b><small>${c.items.length} расчётов</small></button>`).join("")}</section></aside></div>`;
 }
 function history() {
   let items = state.history
@@ -546,7 +571,7 @@ const achievements = () => [
   ],
 ];
 function profile() {
-  return `${heading("ВАША МАТЕМАТИЧЕСКАЯ ИДЕНТИЧНОСТЬ", "Всё сходится на вас.")}<section class="surface profile-hero"><div class="profile-orb">${esc(state.avatar)}</div><div><span class="eyebrow">УРОВЕНЬ ${level()} · ${state.xp} XP</span><h2>${esc(state.name)}</h2><p>${esc(state.bio)}</p>${btn("Редактировать профиль", "edit-profile", "secondary")}</div><div class="profile-stats"><div><b>${state.history.length}</b><span>вычислений</span></div><div><b>${streak()}</b><span>дней подряд</span></div><div><b>${achievements().filter((a) => a[2]).length}/12</b><span>достижений</span></div></div></section><div class="section-heading"><h2>Следы ваших вычислений</h2>${btn("История " + icon("arrow"), "nav", "text-button", 'data-view="history"')}</div><div class="stat-grid">${[
+  return `${heading("ЛИЧНЫЙ ПРОФИЛЬ", "Ваш профиль.")}<section class="surface profile-hero"><div class="profile-orb">${avatarGlyph()}</div><div><span class="eyebrow">УРОВЕНЬ ${level()} · ${state.xp} XP</span><h2>${esc(state.name)}</h2><p>${esc(state.bio)}</p>${btn("Редактировать профиль", "edit-profile", "secondary")}</div><div class="profile-stats"><div><b>${state.history.length}</b><span>вычислений</span></div><div><b>${streak()}</b><span>дней подряд</span></div><div><b>${achievements().filter((a) => a[2]).length}/12</b><span>достижений</span></div></div></section><div class="section-heading"><h2>Следы ваших вычислений</h2>${btn("История " + icon("arrow"), "nav", "text-button", 'data-view="history"')}</div><div class="stat-grid">${[
     [
       "Самый большой ответ",
       state.history.length
@@ -580,12 +605,12 @@ function profile() {
     )}</div><div class="section-heading"><h2>Ваши данные под рукой</h2></div><section class="surface backup"><div><b>История, профиль и оформление</b><p>Резервная копия переносит ваше пространство на другое устройство.</p></div>${btn("Скачать JSON", "export-json", "secondary")}<label class="secondary file-label">Восстановить<input id="import-json" type="file" accept="application/json" hidden></label></section><section class="surface install-card"><div><h3>Калькулятор всегда рядом</h3><p>Добавьте приложение на главный экран. После первого открытия вычисления доступны офлайн.</p></div>${btn("Как установить " + icon("arrow"), "install", "secondary")}</section>`;
 }
 function games() {
-  return `${heading("ФИТНЕС ДЛЯ ВАШЕГО КАЛЬКУЛЯТОРА", "Держите мысль в тонусе.", "Пять тренировок устного счёта. По минуте на попытку.")}<div class="surface game-hero"><div><span class="eyebrow">ЛИЧНЫЙ РЕКОРД</span><h2>${state.gameBest}<span> верных ответов</span></h2><p>${state.games} завершённых тренировок. Следующий рекорд ближе, чем кажется.</p></div><div class="game-art" aria-hidden="true">×<span>+</span></div></div><div class="games-grid">${[
+  return `${heading("ФИТНЕС ДЛЯ ВАШЕГО КАЛЬКУЛЯТОРА", "Держите мысль в тонусе.", "Пять тренировок устного счёта. 90 секунд на попытку.")}<div class="surface game-hero"><div><span class="eyebrow">ЛИЧНЫЙ РЕКОРД</span><h2>${state.gameBest}<span> верных ответов</span></h2><p>${state.games} завершённых тренировок. Следующий рекорд ближе, чем кажется.</p></div><div class="game-art" aria-hidden="true">×<span>+</span></div></div><div class="games-grid">${[
     [
       "sprint",
       "01",
       "Арифметический спринт",
-      "Сложение, вычитание и умножение. 60 секунд на точность.",
+      "Сложение, вычитание и умножение. 90 секунд на точность.",
       "+",
     ],
     [
@@ -625,7 +650,7 @@ function games() {
 }
 function settings() {
   let s = state.settings;
-  return `${heading("ВАШ СПОСОБ ВИДЕТЬ ЧИСЛА", "Настройте поверхность.", "Материал, точность и ощущение каждой клавиши.")}<div class="settings-layout"><section class="surface settings-card"><h3>Материал Aori Surface</h3><p>Мягкий свет, глубина и спокойные контуры.</p><div class="theme-grid">${[
+  return `${heading("НАСТРОЙКИ", "Оформление и вычисления.", "Материал, точность и ощущение каждой клавиши.")}<div class="settings-layout"><section class="surface settings-card"><h3>Материал Aori Surface</h3><p>Мягкий свет, глубина и спокойные контуры.</p><div class="theme-grid">${[
     ["surface", "Surface", "lavender"],
     ["midnight", "Midnight", "blue"],
     ["graphite", "Graphite", "gray"],
@@ -653,17 +678,26 @@ function lab() {
   return `${heading("ИССЛЕДУЙТЕ ЗАВИСИМОСТИ", "Посмотрите на формулу.", "График, таблица, производная и интеграл в одной рабочей области.")}<div class="lab-layout"><section class="surface settings-card"><form id="lab-form"><label>Функция f(x)<input name="formula" value="sin(x)" required placeholder="sin(x)" spellcheck="false"></label><div class="form-row"><label>От x<input name="min" type="number" value="-10" step="any" required></label><label>До x<input name="max" type="number" value="10" step="any" required></label></div><label>Точка для анализа<input name="point" type="number" value="1" step="any" required></label><label>Вторая функция для сравнения<input name="second" placeholder="Например, cos(x)" spellcheck="false"></label><p class="muted">Тригонометрия в лаборатории использует радианы. Интеграл и производная вычисляются численно.</p><button type="submit" class="primary">Исследовать ${icon("arrow")}</button></form><div class="lab-presets">${["sin(x)", "x^2", "1/x", "exp(-x)", "sqrt(x)", "cos(x)"].map((s) => btn(s, "lab-preset", "chip", `data-expression="${s}"`)).join("")}</div></section><section class="surface lab-result" id="lab-result"><div class="graph-placeholder"><span>ƒ(x)</span><h3>У каждого выражения есть форма</h3><p>Введите функцию и нажмите «Исследовать».</p></div></section></div>`;
 }
 function render() {
+  if (online?.supports(view) || enhancements?.supports(view)) {
+    $("#app").innerHTML = shell(
+      online?.supports(view) ? online.render(view) : enhancements.render(view),
+    );
+    applySettings();
+    enhancements?.mount();
+    return;
+  }
   if (universe?.supports(view)) {
     $("#app").innerHTML = shell(universe.render(view));
     applySettings();
     universe.apply();
+    enhancements?.mount();
     return;
   }
   let f =
     {
       home,
       calc: () =>
-        `${heading("ТОЧНОСТЬ В КАЖДОМ ДЕЙСТВИИ", "Калькулятор.")}<div class="full-calc">${calcCard()}<aside class="surface calc-notes"><span class="eyebrow">УПРАВЛЕНИЕ</span><h3>Ввод с клавиатуры</h3><p>Enter — получить ответ<br>Esc — очистить<br>Backspace — удалить символ<br>Скобки — сохранить порядок</p><p>Процент означает сотую часть: <span class="mono">200 × 10% = 20</span>.</p><h3>Последние ответы</h3>${
+        `${heading("ВЫЧИСЛЕНИЯ", "Калькулятор.")}<div class="full-calc">${calcCard()}<aside class="surface calc-notes"><span class="eyebrow">УПРАВЛЕНИЕ</span><h3>Ввод с клавиатуры</h3><p>Enter — получить ответ<br>Esc — очистить<br>Backspace — удалить символ<br>Скобки — сохранить порядок</p><p>Процент означает сотую часть: <span class="mono">200 × 10% = 20</span>.</p><h3>Последние ответы</h3>${
           state.history
             .slice(0, 4)
             .map((h) =>
@@ -687,6 +721,7 @@ function render() {
     }[view] || home;
   $("#app").innerHTML = shell(f());
   applySettings();
+  enhancements?.mount();
 }
 function openModal(content, cls = "") {
   lastFocus = document.activeElement;
@@ -737,12 +772,24 @@ function catalogList(q) {
   let list = [
     ...tools.map((t) => ({ ...t, action: "tool" })),
     ...conversions.map((c) => ({ ...c, action: "convert" })),
-    ...[...appFeatures, ...universeFeatures, ...eventFeatures].map((f) => ({
+    ...[
+      ...appFeatures,
+      ...universeFeatures,
+      ...eventFeatures,
+      ...onlineFeatures,
+      ...extraFeatures,
+    ].map((f) => ({
       ...f,
       action: "feature",
     })),
   ].filter((t) =>
-    (t.title + " " + (t.category || ""))
+    (
+      t.title +
+      " " +
+      (t.category || "") +
+      " " +
+      translateLabel(t.title + " " + (t.category || ""))
+    )
       .toLowerCase()
       .includes(q.toLowerCase()),
   );
@@ -855,7 +902,7 @@ function updateDisplay() {
       (state.memory ? " · M = " + fmt(state.memory) : " · ГОТОВ К ВЫЧИСЛЕНИЯМ");
 }
 function newGame(mode) {
-  game = { mode, score: 0, remaining: 60, end: Date.now() + 60000 };
+  game = { mode, score: 0, remaining: 90, end: Date.now() + 90000 };
   nextQuestion();
   game.timer = setInterval(() => {
     if (!game) return;
@@ -1407,7 +1454,9 @@ document.addEventListener("input", (e) => {
               .filter(
                 (t) =>
                   state.favorites.includes(t.id) &&
-                  t.title.toLowerCase().includes(search.toLowerCase()),
+                  (t.title + translateLabel(t.title))
+                    .toLowerCase()
+                    .includes(search.toLowerCase()),
               )
               .map((t) =>
                 btn(t.title, "tool", "surface quick-card", `data-id="${t.id}"`),
@@ -1747,6 +1796,14 @@ window.addEventListener("hashchange", () => {
       "battle",
       "passes",
       "action",
+      "online",
+      "friends",
+      "messages",
+      "clans",
+      "codes",
+      "network-feed",
+      "avatar",
+      "ibeer",
     ].includes(next)
   )
     navigate(next);
@@ -1776,6 +1833,35 @@ if (incoming) {
     error = e.message;
   }
 } else if (location.hash) view = location.hash.slice(1);
+const extensionUI = {
+  state: () => state,
+  currentView: () => view,
+  persist,
+  render,
+  navigate,
+  icon,
+  esc,
+  btn,
+  openModal,
+  closeModal,
+  toast,
+  fmt,
+  useExpression,
+  copy: copyText,
+  download,
+  avatar: avatarData,
+  setExpression: (value) => {
+    expr = value;
+    finished = false;
+    error = "";
+    if (!["home", "calc"].includes(view)) navigate("calc");
+    updateDisplay();
+  },
+};
+online = createOnline(extensionUI);
+enhancements = createEnhancements(extensionUI);
 render();
+surface = createSurface();
+if (online.supports(view)) online.enter(view);
 if ("serviceWorker" in navigator)
   navigator.serviceWorker.register("./sw.js").catch(() => {});
